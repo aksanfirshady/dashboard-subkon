@@ -672,3 +672,138 @@ function switchNavTab(tabId, element, iconClass) {
         }, 100);
     }
 }
+
+// ==========================================
+// PENGATURAN & KENDALI BARU (SIDEBAR & MODAL)
+// ==========================================
+
+// 1. Toggle Minimize Sidebar
+function toggleSidebar() {
+    const sidebar = document.getElementById('app-sidebar');
+    if (!sidebar) return;
+    
+    sidebar.classList.toggle('collapsed');
+    
+    // Trigger update peta Leaflet agar menyesuaikan dengan lebar baru setelah animasi flex
+    if (map) {
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 300);
+    }
+}
+
+// 2. Modals Pengaturan & Logout
+function openSettingsModal() {
+    const modal = document.getElementById('settings-modal');
+    if (modal) modal.classList.add('active');
+}
+
+function closeSettingsModal() {
+    const modal = document.getElementById('settings-modal');
+    if (modal) modal.classList.remove('active');
+}
+
+function triggerLogout() {
+    const modal = document.getElementById('logout-modal');
+    if (modal) modal.classList.add('active');
+}
+
+function closeLogoutModal() {
+    const modal = document.getElementById('logout-modal');
+    if (modal) modal.classList.remove('active');
+}
+
+function confirmLogout() {
+    closeLogoutModal();
+    // Hentikan simulasi
+    if (simIntervalId) {
+        clearInterval(simIntervalId);
+        simIntervalId = null;
+    }
+    
+    // Tampilkan screen lock overlay futuristik!
+    const lockOverlay = document.createElement('div');
+    lockOverlay.style.position = 'fixed';
+    lockOverlay.style.top = '0';
+    lockOverlay.style.left = '0';
+    lockOverlay.style.width = '100vw';
+    lockOverlay.style.height = '100vh';
+    lockOverlay.style.background = 'rgba(11, 15, 26, 0.98)';
+    lockOverlay.style.backdropFilter = 'blur(20px)';
+    lockOverlay.style.display = 'flex';
+    lockOverlay.style.flexDirection = 'column';
+    lockOverlay.style.alignItems = 'center';
+    lockOverlay.style.justifyContent = 'center';
+    lockOverlay.style.zIndex = '9999';
+    lockOverlay.style.color = '#fff';
+    lockOverlay.style.fontFamily = 'Inter, sans-serif';
+    lockOverlay.style.gap = '20px';
+    
+    lockOverlay.innerHTML = `
+        <div style="font-size: 3.5rem; color: #ff6b64; filter: drop-shadow(0 0 15px rgba(255,107,100,0.5));">
+            <i class="fa-solid fa-lock"></i>
+        </div>
+        <h2 style="font-weight: 800; letter-spacing: 1px; margin: 0;">SISTEM MONITORING DIKUNCI</h2>
+        <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 0;">Sesi operasional Anda telah diakhiri dengan aman.</p>
+        <button onclick="window.location.reload()" style="margin-top: 15px; padding: 10px 24px; background: var(--accent-gradient); border: none; border-radius: 6px; color: #fff; font-weight: 600; cursor: pointer; box-shadow: 0 0 15px rgba(59,130,246,0.4);">
+            <i class="fa-solid fa-key" style="margin-right: 6px;"></i> Masuk Kembali
+        </button>
+    `;
+    
+    document.body.appendChild(lockOverlay);
+}
+
+// 3. Mengubah Tema Peta Leaflet secara Dinamis
+function changeMapTheme(theme) {
+    if (!map) return;
+    
+    // Hapus layer tile yang ada saat ini
+    map.eachLayer(layer => {
+        if (layer instanceof L.TileLayer) {
+            map.removeLayer(layer);
+        }
+    });
+    
+    let url = '';
+    let attribution = '';
+    
+    if (theme === 'dark') {
+        url = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+        attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+    } else if (theme === 'satellite') {
+        url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+        attribution = 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EBP, and the GIS User Community';
+    } else {
+        url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+        attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+    }
+    
+    L.tileLayer(url, {
+        attribution: attribution,
+        maxZoom: 20
+    }).addTo(map);
+    
+    logAlert('SYS', 'SYSTEM', 'GENERAL', 'info', `Tema peta berhasil diubah ke: ${theme.toUpperCase()}`);
+}
+
+// 4. Mengubah Kecepatan Simulasi Live GPS
+function changeSimulationSpeed(speedMs) {
+    const ms = parseInt(speedMs);
+    if (isNaN(ms)) return;
+    
+    // Hentikan interval lama jika sedang aktif
+    if (simIntervalId) {
+        clearInterval(simIntervalId);
+        
+        // Mulai ulang dengan interval baru
+        simIntervalId = setInterval(() => {
+            if (isSimulating) {
+                simulateMovement();
+                updateUI();
+                updateMapMarkers();
+            }
+        }, ms);
+    }
+    
+    logAlert('SYS', 'SYSTEM', 'SIMULATION', 'info', `Interval refresh GPS live disetel ke: ${ms/1000} detik.`);
+}

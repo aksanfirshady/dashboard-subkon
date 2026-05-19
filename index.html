@@ -20,7 +20,7 @@
     <div class="app-container">
         
         <!-- Left Sidebar Navigation -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="app-sidebar">
             <div class="sidebar-logo">
                 <div class="sidebar-logo-icon">
                     <i class="fa-solid fa-truck-monster"></i>
@@ -29,6 +29,9 @@
                     <h1>MONITORING SUBKON</h1>
                     <p>Mahakam Prima Site</p>
                 </div>
+                <button class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Kecilkan Menu">
+                    <i class="fa-solid fa-angles-left"></i>
+                </button>
             </div>
             
             <nav class="sidebar-menu">
@@ -49,6 +52,13 @@
                     <span>Safety</span>
                 </div>
             </nav>
+
+            <div class="sidebar-logout-box">
+                <div class="sidebar-menu-item logout-btn" onclick="triggerLogout()" title="Keluar dari Sistem">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Keluar Sistem</span>
+                </div>
+            </div>
             
             <div class="sidebar-footer">
                 <div style="font-size: 0.68rem; color: var(--text-muted); text-align: center; line-height: 1.4;">
@@ -686,6 +696,68 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn-secondary" onclick="closeDetailUnitModal()" style="width: 100%;">Tutup Panel Kendali</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Settings Button (Bottom Right) -->
+    <button class="floating-settings-btn" onclick="openSettingsModal()" title="Pengaturan Dashboard">
+        <i class="fa-solid fa-gear"></i>
+    </button>
+
+    <!-- MODAL 3: PENGATURAN DASHBOARD -->
+    <div id="settings-modal" class="modal-overlay" onclick="closeModalOnOverlay(event)">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fa-solid fa-gears" style="color: var(--accent-blue);"></i> Pengaturan Dashboard</h3>
+                <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="display:flex; flex-direction:column; gap:15px;">
+                <div class="form-group">
+                    <label class="form-label">Tema Peta Tambang</label>
+                    <select id="setting-map-theme" class="form-input" onchange="changeMapTheme(this.value)">
+                        <option value="dark">CartoDB Dark Matter (Premium)</option>
+                        <option value="satellite">Esri World Imagery (Satelit)</option>
+                        <option value="osm">OpenStreetMap Standard</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Sistem Notifikasi Alarm</label>
+                    <div style="display:flex; gap:10px; margin-top:5px; align-items: center;">
+                        <input type="checkbox" id="setting-alarm-sound" checked style="width:auto; height:auto; cursor:pointer;">
+                        <label for="setting-alarm-sound" style="cursor:pointer; font-size:0.85rem; color:var(--text-secondary);">Aktifkan Bunyi Alarm Insiden Kritis</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Interval Refresh GPS Live</label>
+                    <select id="setting-sim-speed" class="form-input" onchange="changeSimulationSpeed(this.value)">
+                        <option value="1000">1 Detik (Respons Sangat Cepat)</option>
+                        <option value="2000" selected>2 Detik (Rekomendasi Hemat Daya)</option>
+                        <option value="5000">5 Detik (Interval Lambat)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-primary" onclick="closeSettingsModal()" style="width: 100%;">Simpan & Terapkan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: KONFIRMASI KELUAR -->
+    <div id="logout-modal" class="modal-overlay" onclick="closeModalOnOverlay(event)">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div class="modal-header" style="justify-content: center; border-bottom: none; padding-bottom: 0;">
+                <h3 class="modal-title" style="color: #ff6b64;"><i class="fa-solid fa-triangle-exclamation"></i> Konfirmasi Keluar</h3>
+            </div>
+            <div class="modal-body" style="padding: 15px 20px;">
+                <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; margin: 0;">
+                    Apakah Anda yakin ingin keluar dari sistem **Monitoring Subkon Mahakam Prima**? 
+                    Semua engine pemantauan live GPS akan dinonaktifkan sementara.
+                </p>
+            </div>
+            <div class="modal-footer" style="display: flex; gap: 10px; border-top: none; padding-top: 0;">
+                <button type="button" class="btn-secondary" onclick="closeLogoutModal()" style="flex: 1;">Batal</button>
+                <button type="button" class="btn-primary" onclick="confirmLogout()" style="flex: 1; background: rgba(255, 59, 48, 0.2); border-color: rgba(255, 59, 48, 0.4); color: #ff6b64;">Keluar</button>
             </div>
         </div>
     </div>
