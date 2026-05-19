@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="PIT-TRACK: Sistem Web Dashboard Monitoring Real-Time Unit Alat Berat Subkontraktor Area Pertambangan Batubara Prima Mahakam.">
+    <title>Monitoring Subkon</title>
+    
+    <!-- FontAwesome & Google Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Leaflet Map CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <!-- Custom Style CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- Header / Navigation Bar -->
+        <header>
+            <div class="logo-section">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-truck-monster"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>MONITORING SUBKON</h1>
+                    <p>Subcon Unit Monitoring System</p>
+                </div>
+            </div>
+            
+            <div class="header-controls">
+                <!-- HSE Safety KPI Badge -->
+                <div class="live-time-badge" style="border-color: rgba(5, 255, 196, 0.2);" title="K3 Pertambangan: Lost Time Injury (LTI) & Total Recordable Incident (TRI)">
+                    <i class="fa-solid fa-shield-halved" style="color: var(--neon-operating);"></i>
+                    <span>LTI: <strong style="color: var(--neon-operating);">0 HARI</strong></span>
+                    <span style="color: var(--text-muted);">|</span>
+                    <span>TRI: <strong style="color: #fff;">0</strong></span>
+                </div>
+
+                <!-- Weather & Road Ticker Badge -->
+                <div class="live-time-badge" id="weather-badge" style="border-color: rgba(255, 208, 0, 0.2);">
+                    <i class="fa-solid fa-cloud-sun" id="weather-icon" style="color: var(--neon-idle); margin-right: 4px;"></i>
+                    <span id="weather-text">Cerah Berawan | 31°C</span>
+                    <span style="color: var(--text-muted); margin: 0 6px;">|</span>
+                    <span id="road-condition-text">Jalan: <strong style="color: var(--neon-operating);">Kering</strong></span>
+                </div>
+
+                <!-- Status Live & Waktu Terkini -->
+                <div class="live-time-badge">
+                    <div class="live-pulse"></div>
+                    <span>LIVE SYSTEM:</span>
+                    <span id="current-time">00:00:00</span>
+                </div>
+                
+                <!-- Kontrol Simulasi -->
+                <button id="btn-toggle-sim" class="btn-secondary" onclick="toggleSimulation()">
+                    <i class="fa-solid fa-pause" id="sim-icon"></i> <span id="sim-text">Jeda Simulasi</span>
+                </button>
+                
+                <!-- Tambah Unit Baru -->
+                <button class="btn-primary" onclick="openAddUnitModal()">
+                    <i class="fa-solid fa-plus"></i> Tambah Unit Subkon
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Body -->
+        <main>
+            
+            <!-- KPI Scoreboard Grid -->
+            <section class="kpi-grid">
+                <!-- KPI Total Unit -->
+                <div class="glass-panel kpi-card">
+                    <div class="kpi-info">
+                        <h3>Total Unit</h3>
+                        <div class="kpi-value" id="kpi-total-units">0</div>
+                    </div>
+                    <div class="kpi-icon">
+                        <i class="fa-solid fa-cube"></i>
+                    </div>
+                </div>
+                
+                <!-- KPI Operating -->
+                <div class="glass-panel kpi-card operating">
+                    <div class="kpi-info">
+                        <h3>Beroperasi (Operating)</h3>
+                        <div class="kpi-value" id="kpi-operating-units">0</div>
+                    </div>
+                    <div class="kpi-icon">
+                        <i class="fa-solid fa-person-digging"></i>
+                    </div>
+                </div>
+                
+                <!-- KPI Idle -->
+                <div class="glass-panel kpi-card idle">
+                    <div class="kpi-info">
+                        <h3>Siaga (Standby/Idle)</h3>
+                        <div class="kpi-value" id="kpi-idle-units">0</div>
+                    </div>
+                    <div class="kpi-icon">
+                        <i class="fa-solid fa-hourglass-half"></i>
+                    </div>
+                </div>
+                
+                <!-- KPI Breakdown -->
+                <div class="glass-panel kpi-card breakdown">
+                    <div class="kpi-info">
+                        <h3>Rusak (Breakdown)</h3>
+                        <div class="kpi-value" id="kpi-breakdown-units">0</div>
+                    </div>
+                    <div class="kpi-icon">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                </div>
+                
+                <!-- KPI PA / Availability -->
+                <div class="glass-panel kpi-card maintenance">
+                    <div class="kpi-info">
+                        <h3>Fisik Siap (PA / UA)</h3>
+                        <div class="kpi-value"><span id="kpi-pa">0</span>% / <span id="kpi-ua">0</span>%</div>
+                    </div>
+                    <div class="kpi-icon">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Split Section: Peta & Analitik -->
+            <section class="monitoring-section">
+                
+                <!-- Left Pane: Live GPS Tracker Map -->
+                <div class="glass-panel map-container-wrapper">
+                    <div class="map-header">
+                        <h2 class="panel-title">
+                            <i class="fa-solid fa-map-location-dot"></i> Peta Pemantauan Pit Tambang Real-Time
+                        </h2>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">
+                            <span style="margin-right: 10px;"><i class="fa-solid fa-circle" style="color: var(--neon-operating);"></i> Operating</span>
+                            <span style="margin-right: 10px;"><i class="fa-solid fa-circle" style="color: var(--neon-idle);"></i> Idle</span>
+                            <span style="margin-right: 10px;"><i class="fa-solid fa-circle" style="color: var(--neon-breakdown);"></i> Breakdown</span>
+                            <span><i class="fa-solid fa-circle" style="color: var(--neon-maintenance);"></i> Maintenance</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Operational Incident & Support Command Bar -->
+                    <div class="map-controls-bar" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); border: 1px solid var(--border-glass); border-radius:8px; padding:6px 12px; margin-bottom:10px; font-size:0.8rem; gap:10px; flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="color:var(--text-secondary); font-weight:600;"><i class="fa-solid fa-cloud-bolt" style="color:var(--accent-blue);"></i> Simulasi Cuaca:</span>
+                            <!-- Picu Hujan Deras -->
+                            <button id="btn-trigger-rain" class="btn-action-trigger breakdown" style="padding:4px 10px; font-size:0.72rem; border-radius:4px; margin:0; cursor:pointer;" onclick="triggerWeatherIncident('rain')">
+                                <i class="fa-solid fa-cloud-showers-heavy"></i> Picu Hujan Deras
+                            </button>
+                            <!-- Reset Cuaca Cerah -->
+                            <button id="btn-trigger-sunny" class="btn-action-trigger refuel" style="padding:4px 10px; font-size:0.72rem; border-radius:4px; margin:0; cursor:pointer; display:none;" onclick="triggerWeatherIncident('sunny')">
+                                <i class="fa-solid fa-sun"></i> Keringkan Jalan (Normal)
+                            </button>
+                        </div>
+                        
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="color:var(--text-secondary); font-weight:600;"><i class="fa-solid fa-truck-droplet" style="color:var(--neon-operating);"></i> Fuel Support:</span>
+                            <!-- Dispatch Fuel Truck -->
+                            <button id="btn-dispatch-fuel" class="btn-action-trigger refuel" style="padding:4px 10px; font-size:0.72rem; border-radius:4px; margin:0; cursor:pointer;" onclick="dispatchFuelTruckSupport()">
+                                <i class="fa-solid fa-gas-pump"></i> Dispatch Fuel Truck FT-501
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="map"></div>
+                </div>
+
+                <!-- Right Pane: Analytics & Alarm Logs -->
+                <div class="glass-panel analytics-pane">
+                    <!-- Tab Buttons -->
+                    <div class="pane-tabs">
+                        <button class="pane-tab-btn active" onclick="switchTab('tab-charts', this)">
+                            <i class="fa-solid fa-chart-pie"></i> Analitik Armada
+                        </button>
+                        <button class="pane-tab-btn" onclick="switchTab('tab-alerts', this)">
+                            <i class="fa-solid fa-bell"></i> Log Alarm Real-Time <span id="alerts-count-badge" class="status-badge breakdown" style="padding: 1px 6px; font-size: 0.65rem; margin-left: 5px;">0</span>
+                        </button>
+                    </div>
+
+                    <!-- Tab Content: Charts -->
+                    <div id="tab-charts" class="tab-content active">
+                        <div class="chart-container">
+                            <div id="status-donut-chart" style="width: 100%; max-width: 320px; margin: 0 auto;"></div>
+                        </div>
+                        <div class="chart-container" style="border-top: 1px solid var(--border-glass); padding-top: 15px; margin-top: 10px; height: 180px;">
+                            <div id="productivity-trend-chart" style="width: 100%; height: 100%;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Tab Content: Live Alert Feeds -->
+                    <div id="tab-alerts" class="tab-content">
+                        <div class="alerts-feed" id="alerts-feed">
+                            <!-- Alert list will be injected dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Bottom Section: Table List & Subcontractor Cards -->
+            <section class="bottom-section">
+                
+                <!-- Left Pane: Unit Table List -->
+                <div class="glass-panel">
+                    <div class="table-controls">
+                        <h2 class="panel-title">
+                            <i class="fa-solid fa-list-check"></i> Daftar Pemantauan Seluruh Unit
+                        </h2>
+                        
+                        <div class="filter-group">
+                            <!-- Search -->
+                            <div class="search-box">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="search-input" class="search-input" placeholder="Cari Unit ID, Tipe, Operator..." onkeyup="filterUnits()">
+                            </div>
+                            
+                            <!-- Subcon Filter -->
+                            <select id="filter-subcon" class="select-filter" onchange="filterUnits()">
+                                <option value="all">Semua Subkon</option>
+                                <!-- Injected dynamically -->
+                            </select>
+                            
+                            <!-- Status Filter -->
+                            <select id="filter-status" class="select-filter" onchange="filterUnits()">
+                                <option value="all">Semua Status</option>
+                                <option value="Operating">Operating</option>
+                                <option value="Idle">Idle</option>
+                                <option value="Breakdown">Breakdown</option>
+                                <option value="Maintenance">Maintenance</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Table Wrapper -->
+                    <div class="table-wrapper">
+                        <table class="unit-table" id="unit-table">
+                            <thead>
+                                <tr>
+                                    <th>Unit ID</th>
+                                    <th>Model Alat</th>
+                                    <th>Tipe</th>
+                                    <th>Subkontraktor</th>
+                                    <th>Operator</th>
+                                    <th>Status</th>
+                                    <th>Bahan Bakar</th>
+                                    <th>Hour Meter (HM)</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="unit-table-body">
+                                <!-- Data rows will be injected dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Right Pane: Subcontractors Performance -->
+                <div class="glass-panel">
+                    <h2 class="panel-title" style="margin-bottom: 20px;">
+                        <i class="fa-solid fa-users-gear"></i> Kontribusi Subkontraktor
+                    </h2>
+                    
+                    <div class="subcon-panel" id="subcontractors-panel">
+                        <!-- Subcontractor cards will be injected dynamically -->
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL 1: TAMBAH UNIT BARU -->
+    <div id="add-unit-modal" class="modal-overlay" onclick="closeModalOnOverlay(event)">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fa-solid fa-circle-plus" style="color: var(--accent-blue);"></i> Tambah Armada Baru Subkon</h3>
+                <button class="modal-close" onclick="closeAddUnitModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="add-unit-form" onsubmit="submitNewUnit(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="new-unit-id">Unit ID (Kode Lambung)</label>
+                            <input type="text" id="new-unit-id" class="form-input" placeholder="Contoh: DT-107" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="new-unit-name">Model Unit / Seri</label>
+                            <input type="text" id="new-unit-name" class="form-input" placeholder="Contoh: Komatsu HD785-7" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="new-unit-type">Jenis Unit</label>
+                            <select id="new-unit-type" class="form-select" required>
+                                <option value="Dump Truck">Dump Truck</option>
+                                <option value="Excavator">Excavator</option>
+                                <option value="Bulldozer">Bulldozer</option>
+                                <option value="Loader">Wheel Loader</option>
+                                <option value="Fuel Truck">Fuel Truck</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="new-unit-subcon">Subkontraktor</label>
+                            <select id="new-unit-subcon" class="form-select" required>
+                                <!-- Injected dynamically -->
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="new-unit-operator">Nama Operator</label>
+                            <input type="text" id="new-unit-operator" class="form-input" placeholder="Contoh: Joko Widodo" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="new-unit-fuel-cap">Kapasitas Tangki BBM (Liter)</label>
+                            <input type="number" id="new-unit-fuel-cap" class="form-input" placeholder="Contoh: 600" value="600" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="new-unit-hm">Odometer Awal (KM)</label>
+                            <input type="number" id="new-unit-odometer" class="form-input" placeholder="Contoh: 50000" value="50000" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="new-unit-hm">Hour Meter (HM) Awal</label>
+                            <input type="number" step="0.1" id="new-unit-hm" class="form-input" placeholder="Contoh: 1500" value="1500" required>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-footer" style="padding-right: 0; padding-bottom: 0;">
+                        <button type="button" class="btn-secondary" onclick="closeAddUnitModal()">Batal</button>
+                        <button type="submit" class="btn-primary">Daftarkan Unit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: DETAIL UNIT & AKSI CEPAT -->
+    <div id="detail-unit-modal" class="modal-overlay" onclick="closeModalOnOverlay(event)">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fa-solid fa-circle-info" style="color: var(--accent-blue);"></i> Panel Kendali Unit: <span id="detail-title-id">DT-101</span></h3>
+                <button class="modal-close" onclick="closeDetailUnitModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">Model Seri</div>
+                        <div class="detail-val" id="det-name">-</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Subkontraktor</div>
+                        <div class="detail-val" id="det-subcon">-</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Operator</div>
+                        <div class="detail-val" id="det-operator">-</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Status Saat Ini</div>
+                        <div class="detail-val" id="det-status">-</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Hour Meter (HM)</div>
+                        <div class="detail-val" id="det-hm">-</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Odometer</div>
+                        <div class="detail-val" id="det-odometer">-</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Suhu Mesin</div>
+                        <div class="detail-val" id="det-temp">-</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Kecepatan Live</div>
+                        <div class="detail-val" id="det-speed">-</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Tingkat Bahan Bakar (<span id="det-fuel-liters">0</span> L / <span id="det-fuel-capacity">0</span> L)</label>
+                    <div class="fuel-bar-container" style="width: 100%; margin-top: 5px;">
+                        <div class="fuel-track" style="height: 10px;">
+                            <div class="fuel-fill" id="det-fuel-bar" style="width: 0%;"></div>
+                        </div>
+                        <span class="fuel-val" id="det-fuel-pct" style="width: 40px; font-weight: bold;">0%</span>
+                    </div>
+                </div>
+
+                <!-- Quick Simulation Trigger Box -->
+                <div class="action-box">
+                    <div class="action-box-title">Simulasi Cepat Gangguan Operasional</div>
+                    <div class="action-btn-row">
+                        <!-- Memicu Breakdown -->
+                        <button id="btn-sim-breakdown" class="btn-action-trigger breakdown" onclick="triggerUnitBreakdown()">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Kerusakan Mesin (Overheat)
+                        </button>
+                        
+                        <!-- Memicu Refueling -->
+                        <button id="btn-sim-refuel" class="btn-action-trigger refuel" onclick="triggerUnitRefuel()">
+                            <i class="fa-solid fa-gas-pump"></i> Isi Ulang Solar (Refuel)
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeDetailUnitModal()" style="width: 100%;">Tutup Panel Kendali</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet Map JS script -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- ApexCharts JS script -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+    <!-- App Logic Scripts -->
+    <script src="js/data.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/simulation.js"></script>
+    <script src="js/app.js"></script>
+    
+</body>
+</html>
