@@ -632,3 +632,43 @@ function dispatchFuelTruckSupport() {
         updateUI();
     }
 }
+
+// Fungsi untuk Berpindah Tab Navigasi Kiri (Home, Produksi, Plant, Safety)
+function switchNavTab(tabId, element, iconClass) {
+    // 1. Matikan seluruh section-content
+    const sections = document.querySelectorAll('.nav-section');
+    sections.forEach(sec => {
+        sec.classList.remove('active');
+    });
+
+    // 2. Aktifkan section target
+    const targetSection = document.getElementById(`section-${tabId}`);
+    if (targetSection) {
+        targetSection.classList.add('active');
+    }
+
+    // 3. Bersihkan status active di semua menu sidebar
+    const menuItems = document.querySelectorAll('.sidebar-menu-item');
+    menuItems.forEach(item => {
+        item.classList.remove('active');
+    });
+
+    // 4. Set menu item terpilih sebagai active
+    if (element) {
+        element.classList.add('active');
+    }
+
+    // 5. Perbarui judul halaman di header
+    const pageTitleEl = document.getElementById('current-page-title');
+    if (pageTitleEl) {
+        const readableTitle = tabId.charAt(0).toUpperCase() + tabId.slice(1);
+        pageTitleEl.innerHTML = `<i class="${iconClass}" style="color: var(--accent-blue);"></i> ${readableTitle}`;
+    }
+
+    // 6. Jika berpindah ke Home, trigger refresh map (untuk memastikan Leaflet me-layout peta dengan benar setelah transisi CSS flex)
+    if (tabId === 'home' && map) {
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 100);
+    }
+}
