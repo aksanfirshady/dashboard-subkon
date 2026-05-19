@@ -112,8 +112,10 @@ body {
 .sidebar.collapsed .sidebar-logo-text,
 .sidebar.collapsed .sidebar-menu-item span,
 .sidebar.collapsed .sidebar-footer,
-.sidebar.collapsed .sidebar-logout-box span {
-    display: none;
+.sidebar.collapsed .sidebar-logout-box span,
+.sidebar.collapsed .dropdown-arrow,
+.sidebar.collapsed .sidebar-dropdown-menu {
+    display: none !important;
     opacity: 0;
     pointer-events: none;
 }
@@ -1297,3 +1299,302 @@ main {
     70% { box-shadow: 0 0 0 6px rgba(255, 59, 48, 0); }
     100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
 }
+
+/* ==========================================
+   STYLE UNTUK AKSAN PREMAN MOCKUP DASHBOARD
+   ========================================== */
+
+/* Progress Ring (PA, MA, UA) Gauges */
+.progress-ring-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 15px;
+    text-align: center;
+    position: relative;
+    border: 1px solid var(--border-glass);
+    border-radius: 12px;
+    background: rgba(18, 22, 33, 0.4);
+    min-height: 240px;
+}
+
+.progress-ring-title {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+}
+
+.progress-ring-title.pa { color: #ffca28; }
+.progress-ring-title.ma { color: #4caf50; }
+.progress-ring-title.ua { color: #2196f3; }
+
+.progress-ring-container {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 15px;
+}
+
+.progress-ring-svg {
+    transform: rotate(-90deg);
+}
+
+.progress-ring-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.05);
+    stroke-width: 9;
+}
+
+.progress-ring-fill {
+    fill: none;
+    stroke-width: 9;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progress-ring-fill.pa {
+    stroke: #ffca28;
+    filter: drop-shadow(0 0 5px rgba(255, 202, 40, 0.4));
+}
+.progress-ring-fill.ma {
+    stroke: #4caf50;
+    filter: drop-shadow(0 0 5px rgba(76, 175, 80, 0.4));
+}
+.progress-ring-fill.ua {
+    stroke: #2196f3;
+    filter: drop-shadow(0 0 5px rgba(33, 150, 243, 0.4));
+}
+
+.progress-ring-value-container {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.progress-ring-value {
+    font-size: 1.15rem;
+    font-weight: 900;
+    color: #fff;
+}
+
+.progress-ring-label {
+    font-size: 0.5rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    margin-top: 1px;
+    letter-spacing: 0.2px;
+}
+
+.progress-ring-desc {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    padding: 0 5px;
+}
+
+/* Status Armada Card */
+.status-armada-card {
+    background: rgba(17, 24, 39, 0.4);
+    border: 1px solid rgba(255, 202, 40, 0.2);
+    border-radius: 12px;
+    padding: 18px;
+    position: relative;
+    box-shadow: inset 0 0 15px rgba(255, 202, 40, 0.05);
+}
+
+.status-armada-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    padding-bottom: 10px;
+}
+
+.status-armada-title {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.status-armada-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 12px;
+}
+
+.status-armada-box {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.status-armada-box.total {
+    grid-column: span 2;
+    background: rgba(59, 130, 246, 0.03);
+    border-color: rgba(59, 130, 246, 0.08);
+}
+
+.status-armada-box-label {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    font-weight: 700;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.status-armada-box-val {
+    font-size: 1.4rem;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1.1;
+}
+
+.status-armada-box-val.green { color: #4caf50; }
+.status-armada-box-val.orange { color: #ffca28; }
+.status-armada-box-val.red { color: #ff6b64; }
+
+/* Sub Tabs Container */
+.sub-tabs-container {
+    display: flex;
+    gap: 25px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 0;
+    margin-bottom: 20px;
+}
+
+.sub-tab-item {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    padding-bottom: 12px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: var(--transition-smooth);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sub-tab-item:hover, .sub-tab-item.active {
+    color: #ffca28;
+}
+
+.sub-tab-item.active {
+    border-bottom-color: #ffca28;
+}
+
+/* Unit Grid Card Mode */
+.unit-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 15px;
+}
+
+.unit-item-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-glass);
+    border-radius: 12px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    transition: all 0.3s ease;
+}
+
+.unit-item-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(255, 202, 40, 0.25);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.unit-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.unit-card-meta {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    font-weight: 700;
+}
+
+.unit-card-title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #fff;
+    margin: 4px 0 2px 0;
+}
+
+.unit-card-type {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+}
+
+.unit-card-hm-box {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 8px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+
+.unit-card-hm-box strong {
+    color: #fff;
+    font-weight: 700;
+    font-family: monospace;
+}
+
+.unit-card-stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.15);
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.unit-card-stat-box {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.unit-card-stat-label {
+    font-size: 0.58rem;
+    color: var(--text-muted);
+    font-weight: 700;
+}
+
+.unit-card-stat-val {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #ffca28;
+}
+
+.unit-card-stat-val.ma { color: #4caf50; }
+.unit-card-stat-val.ua { color: #2196f3; }

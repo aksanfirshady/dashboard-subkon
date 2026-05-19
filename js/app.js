@@ -36,13 +36,39 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // Fungsi Sistem Jam Real-time (Waktu Indonesia Tengah - WITA)
 function startClock() {
+    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
     setInterval(() => {
+        const now = new Date();
+        
+        // Update current-time (compat)
         const timeSpan = document.getElementById('current-time');
         if (timeSpan) {
-            const now = new Date();
-            // Format jam HH:MM:SS
-            const timeStr = now.toTimeString().split(' ')[0];
-            timeSpan.textContent = timeStr;
+            timeSpan.textContent = now.toTimeString().split(' ')[0];
+        }
+
+        // Update header time in format: HH:MM:SS AM/PM
+        const timeHeader = document.getElementById('header-time-string');
+        if (timeHeader) {
+            let hours = now.getHours();
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12; // the hour '0' should be '12'
+            const hoursStr = String(hours).padStart(2, '0');
+            timeHeader.textContent = `${hoursStr}:${minutes}:${seconds} ${ampm}`;
+        }
+
+        // Update header date in Indonesian format: Hari, DD Bulan YYYY
+        const dateHeader = document.getElementById('header-date-string');
+        if (dateHeader) {
+            const dayName = days[now.getDay()];
+            const dayNum = now.getDate();
+            const monthName = months[now.getMonth()];
+            const year = now.getFullYear();
+            dateHeader.textContent = `${dayName}, ${dayNum} ${monthName} ${year}`;
         }
     }, 1000);
 }
@@ -77,12 +103,59 @@ function populateSubconOptions() {
 function updateUI() {
     // 1. Perbarui Statistik Global (KPI Panel)
     const stats = getGlobalStats();
-    document.getElementById('kpi-total-units').textContent = stats.total;
-    document.getElementById('kpi-operating-units').textContent = stats.operating;
-    document.getElementById('kpi-idle-units').textContent = stats.idle;
-    document.getElementById('kpi-breakdown-units').textContent = stats.breakdown;
-    document.getElementById('kpi-pa').textContent = stats.pa;
-    document.getElementById('kpi-ua').textContent = stats.ua;
+    
+    // Set total, operating, idle, breakdown counts
+    const totalEl = document.getElementById('kpi-total-units');
+    if (totalEl) totalEl.textContent = stats.total;
+    
+    const operatingEl = document.getElementById('kpi-operating-units');
+    if (operatingEl) operatingEl.textContent = stats.operating;
+    
+    const idleEl = document.getElementById('kpi-idle-units');
+    if (idleEl) idleEl.textContent = stats.idle;
+    
+    const bdEl = document.getElementById('kpi-breakdown-units');
+    if (bdEl) bdEl.textContent = stats.breakdown;
+    
+    // Compat/legacy binders
+    const paLegacy = document.getElementById('kpi-pa');
+    if (paLegacy) paLegacy.textContent = stats.pa;
+    
+    const uaLegacy = document.getElementById('kpi-ua');
+    if (uaLegacy) uaLegacy.textContent = stats.ua;
+
+    // Radial Gauge 1: Rata-Rata PA
+    const paVal = parseFloat(stats.pa);
+    const paFill = document.getElementById('gauge-pa-fill');
+    const paText = document.getElementById('gauge-pa-val');
+    if (paFill && paText) {
+        paText.textContent = paVal.toFixed(1) + "%";
+        const offset = 283 * (1 - paVal / 100);
+        paFill.style.strokeDashoffset = offset;
+    }
+
+    // Radial Gauge 2: Rata-Rata MA
+    // Mechanical Availability = (Operating + Idle) / (Operating + Idle + Breakdown) * 100
+    const totalWorking = stats.operating + stats.idle;
+    const totalAll = totalWorking + stats.breakdown;
+    const maVal = totalAll > 0 ? (totalWorking / totalAll * 100) : 95.0;
+    const maFill = document.getElementById('gauge-ma-fill');
+    const maText = document.getElementById('gauge-ma-val');
+    if (maFill && maText) {
+        maText.textContent = maVal.toFixed(1) + "%";
+        const offset = 283 * (1 - maVal / 100);
+        maFill.style.strokeDashoffset = offset;
+    }
+
+    // Radial Gauge 3: Rata-Rata UA
+    const uaVal = parseFloat(stats.ua);
+    const uaFill = document.getElementById('gauge-ua-fill');
+    const uaText = document.getElementById('gauge-ua-val');
+    if (uaFill && uaText) {
+        uaText.textContent = uaVal.toFixed(1) + "%";
+        const offset = 283 * (1 - uaVal / 100);
+        uaFill.style.strokeDashoffset = offset;
+    }
 
     // 1b. Perbarui Ticker Cuaca & Jalan di Header
     const weatherTextEl = document.getElementById('weather-text');
@@ -118,6 +191,16 @@ function updateUI() {
     // 5. Perbarui Detail Modal secara Live (jika sedang terbuka)
     if (activeDetailUnitId) {
         updateDetailModalContent(activeDetailUnitId);
+    }
+
+    // 6. Perbarui tabel Database jika sedang dalam posisi aktif
+    const dbUnitActive = document.getElementById('section-db-unit');
+    if (dbUnitActive && dbUnitActive.classList.contains('active')) {
+        renderDatabaseUnits();
+    }
+    const dbManActive = document.getElementById('section-db-manpower');
+    if (dbManActive && dbManActive.classList.contains('active')) {
+        renderDatabaseManpower();
     }
 }
 
@@ -647,7 +730,7 @@ function switchNavTab(tabId, element, iconClass) {
         targetSection.classList.add('active');
     }
 
-    // 3. Bersihkan status active di semua menu sidebar
+    // 3. Bersihkan status active di semua menu sidebar (termasuk submenu)
     const menuItems = document.querySelectorAll('.sidebar-menu-item');
     menuItems.forEach(item => {
         item.classList.remove('active');
@@ -661,7 +744,11 @@ function switchNavTab(tabId, element, iconClass) {
     // 5. Perbarui judul halaman di header
     const pageTitleEl = document.getElementById('current-page-title');
     if (pageTitleEl) {
-        const readableTitle = tabId.charAt(0).toUpperCase() + tabId.slice(1);
+        let readableTitle = tabId.charAt(0).toUpperCase() + tabId.slice(1);
+        if (tabId === 'db-unit') readableTitle = 'Database Unit';
+        else if (tabId === 'db-manpower') readableTitle = 'Database Man Power';
+        else if (tabId === 'kpisco') readableTitle = 'KPI SCO';
+        
         pageTitleEl.innerHTML = `<i class="${iconClass}" style="color: var(--accent-blue);"></i> ${readableTitle}`;
     }
 
@@ -670,6 +757,13 @@ function switchNavTab(tabId, element, iconClass) {
         setTimeout(() => {
             map.invalidateSize();
         }, 100);
+    }
+
+    // 7. Jika berpindah ke tab Database, lakukan render data secara otomatis
+    if (tabId === 'db-unit') {
+        renderDatabaseUnits();
+    } else if (tabId === 'db-manpower') {
+        renderDatabaseManpower();
     }
 }
 
@@ -806,4 +900,522 @@ function changeSimulationSpeed(speedMs) {
     }
     
     logAlert('SYS', 'SYSTEM', 'SIMULATION', 'info', `Interval refresh GPS live disetel ke: ${ms/1000} detik.`);
+}
+
+// ==============================================================
+// KONTROL SUB-TAB DI HALAMAN HOME (PREMAN v1.2 MOCKUP FLOW)
+// ==============================================================
+let mockupActiveChip = 'all';
+
+function switchSubTab(subTabId, element) {
+    // 1. Bersihkan kelas aktif di seluruh tombol sub-tab
+    const tabs = document.querySelectorAll('.sub-tab-item');
+    tabs.forEach(t => t.classList.remove('active'));
+
+    // 2. Set tab yang diklik menjadi aktif
+    if (element) {
+        element.classList.add('active');
+    } else {
+        const targetBtn = document.getElementById(`subtab-${subTabId}`);
+        if (targetBtn) targetBtn.classList.add('active');
+    }
+
+    // 3. Sembunyikan seluruh konten sub-tab
+    const contents = document.querySelectorAll('.subtab-content');
+    contents.forEach(c => c.style.display = 'none');
+
+    // 4. Tampilkan sub-tab target
+    const targetContent = document.getElementById(`subtab-content-${subTabId}`);
+    if (targetContent) {
+        targetContent.style.display = 'block';
+    }
+
+    // 5. Trigger update peta jika berpindah ke GPS live agar map me-layout ulang dengan benar
+    if (subTabId === 'peta-gps') {
+        if (map) {
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 100);
+        }
+    } else if (subTabId === 'monitoring-log') {
+        // Render unit cards pertama kali
+        renderMockupUnitCards();
+    }
+}
+
+// Merender Grid Unit Cards di Tab Monitoring & Log Harian
+function renderMockupUnitCards() {
+    const container = document.getElementById('mockup-cards-container');
+    if (!container) return;
+
+    const query = document.getElementById('mockup-search-input').value.toLowerCase().trim();
+    
+    // Saring data units
+    const filtered = unitsData.filter(u => {
+        const matchesSearch = u.id.toLowerCase().includes(query) || 
+                              u.name.toLowerCase().includes(query) || 
+                              u.subcon.toLowerCase().includes(query);
+                              
+        const matchesChip = mockupActiveChip === 'all' || 
+                            (mockupActiveChip === 'Operating' && u.status === 'Operating') ||
+                            (mockupActiveChip === 'Standby' && u.status === 'Idle') ||
+                            (mockupActiveChip === 'Breakdown' && u.status === 'Breakdown');
+                            
+        return matchesSearch && matchesChip;
+    });
+
+    container.innerHTML = '';
+
+    if (filtered.length === 0) {
+        container.innerHTML = `<div style="grid-column: span 3; text-align: center; padding: 40px; color: var(--text-muted);">
+            <i class="fa-solid fa-magnifying-glass" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+            Tidak ada unit yang cocok dengan penyaringan.
+        </div>`;
+        return;
+    }
+
+    filtered.forEach(u => {
+        const card = document.createElement('div');
+        card.className = 'glass-panel unit-card';
+        
+        let statusBadgeClass = 'operating';
+        let statusLabel = 'OPERASI';
+        if (u.status === 'Idle') {
+            statusBadgeClass = 'idle';
+            statusLabel = 'STANDBY';
+        } else if (u.status === 'Breakdown') {
+            statusBadgeClass = 'breakdown';
+            statusLabel = 'REPAIR (BD)';
+        } else if (u.status === 'Maintenance') {
+            statusBadgeClass = 'maintenance';
+            statusLabel = 'MAINTENANCE';
+        }
+
+        // Subcon short name
+        const subconShort = u.subcon.includes('Bukit Jasa Bara') ? 'BJB' :
+                            u.subcon.includes('Mandala Trans') ? 'MTB' :
+                            u.subcon.includes('Sinar Mining') ? 'SMU' : 'KP';
+
+        // Hitung PA, MA, UA secara live/teoritis untuk masing-masing unit agar terkesan detail
+        const unitPA = u.status === 'Breakdown' ? '0.0%' : '100.0%';
+        const unitMA = u.status === 'Breakdown' ? '0.0%' : '100.0%';
+        const unitUA = u.status === 'Operating' ? '100.0%' : '0.0%';
+
+        card.innerHTML = `
+            <div class="unit-card-header">
+                <div class="unit-card-title-group">
+                    <span class="unit-card-title">${u.id}</span>
+                    <span class="unit-card-subtitle">${u.name} • ${subconShort}</span>
+                </div>
+                <span class="status-badge ${statusBadgeClass}">${statusLabel}</span>
+            </div>
+            
+            <div class="unit-card-stats-row">
+                <div class="unit-card-stat-item">
+                    <span class="label">PA</span>
+                    <span class="val green">${unitPA}</span>
+                </div>
+                <div class="unit-card-stat-item">
+                    <span class="label">MA</span>
+                    <span class="val orange">${unitMA}</span>
+                </div>
+                <div class="unit-card-stat-item">
+                    <span class="label">UA</span>
+                    <span class="val blue">${unitUA}</span>
+                </div>
+            </div>
+
+            <div class="unit-card-details">
+                <div class="detail-item">
+                    <span>Operator:</span>
+                    <strong>${u.operator}</strong>
+                </div>
+                <div class="detail-item" style="margin-top: 5px;">
+                    <span>Hour Meter (HM):</span>
+                    <strong style="font-family: monospace;">${u.hm.toLocaleString('id-ID', {minimumFractionDigits:1, maximumFractionDigits:1})} Jam</strong>
+                </div>
+            </div>
+
+            <!-- Card actions matching mockup styling -->
+            <div style="display: flex; gap: 8px; margin-top: 15px;">
+                <button class="btn-secondary" style="flex: 1; padding: 6px; font-size: 0.7rem; border-radius: 4px;" onclick="openDetailUnitModal('${u.id}')">
+                    <i class="fa-solid fa-sliders"></i> Detail & Kendali
+                </button>
+                <button class="btn-secondary" style="flex: 1; padding: 6px; font-size: 0.7rem; border-radius: 4px;" onclick="focusUnitOnMap('${u.id}'); switchSubTab('peta-gps')">
+                    <i class="fa-solid fa-compass"></i> Lacak GPS
+                </button>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+// Menangani Chips Filter di Tab Monitoring
+function filterMockupChips(status, btn) {
+    mockupActiveChip = status;
+
+    // Bersihkan kelas active dari seluruh chip
+    const container = document.getElementById('mockup-chips-container');
+    if (container) {
+        const chips = container.querySelectorAll('button');
+        chips.forEach(c => {
+            c.className = 'btn-secondary';
+            c.style.background = 'rgba(255, 255, 255, 0.02)';
+            c.style.borderColor = 'rgba(255,255,255,0.06)';
+            c.style.color = 'var(--text-secondary)';
+        });
+    }
+
+    // Set chip terpilih menjadi active dengan warna orange/yellow brand
+    if (btn) {
+        btn.className = 'btn-secondary active';
+        btn.style.background = 'rgba(255, 202, 28, 0.15)';
+        btn.style.borderColor = 'rgba(255, 202, 28, 0.3)';
+        btn.style.color = '#ffca28';
+    }
+
+    renderMockupUnitCards();
+}
+
+// Simulasi Unggah Excel Harian
+function handleExcelUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Loading overlay simulasi
+    const toast = document.createElement('div');
+    toast.style.position = 'fixed';
+    toast.style.bottom = '30px';
+    toast.style.right = '30px';
+    toast.style.background = '#1b1f2a';
+    toast.style.border = '1px solid rgba(76, 175, 80, 0.3)';
+    toast.style.borderRadius = '8px';
+    toast.style.padding = '15px 20px';
+    toast.style.color = '#fff';
+    toast.style.zIndex = '99999';
+    toast.style.display = 'flex';
+    toast.style.alignItems = 'center';
+    toast.style.gap = '12px';
+    toast.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
+    toast.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="color: #4caf50; font-size: 1.2rem;"></i> <span>Membaca berkas: <strong>${file.name}</strong>...</span>`;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.innerHTML = `<i class="fa-solid fa-check" style="color: #4caf50; font-size: 1.2rem;"></i> <span>Data berhasil diurai! Menghitung ulang KPI...</span>`;
+        
+        setTimeout(() => {
+            document.body.removeChild(toast);
+            triggerSimulateDumpData();
+        }, 1200);
+    }, 1500);
+}
+
+// Aksi Trigger: Mengimpor Data Telemetri & Mengatur Nilai Gauges Persis Mockup!
+function triggerSimulateDumpData() {
+    // 1. Set values to match mockup EXACTLY!
+    // Total: 132, Operasi: 93, Standby: 20, Repair: 13
+    // PA: 91.7%, MA: 96.9%, UA: 36.3%
+    
+    // Kita ubah total data agar sesuai visual mockup
+    unitsData = [];
+    
+    // Kita generate 93 operating units, 20 idle units, 13 breakdown units secara dinamis agar maps & list sangat hidup!
+    // 93 Operating units
+    for(let i=0; i<93; i++) {
+        const id = `DT-${100 + i}`;
+        unitsData.push({
+            id: id,
+            name: i % 2 === 0 ? "Komatsu PC300" : "Caterpillar 777D",
+            type: i % 3 === 0 ? "Excavator" : "Dump Truck",
+            subcon: SUBCONTRACTORS[i % SUBCONTRACTORS.length].name,
+            operator: `Operator ${i+1}`,
+            status: "Operating",
+            fuel: 50 + Math.random() * 45,
+            fuelCapacity: 500,
+            speed: 22 + Math.random() * 15,
+            hm: 4000 + Math.random() * 8000,
+            lat: ROUTE_HAULING_A[i % ROUTE_HAULING_A.length][0] + (Math.random() - 0.5) * 0.003,
+            lng: ROUTE_HAULING_A[i % ROUTE_HAULING_A.length][1] + (Math.random() - 0.5) * 0.003,
+            route: i % 2 === 0 ? ROUTE_HAULING_A : ROUTE_HAULING_B,
+            routeIndex: i % ROUTE_HAULING_A.length,
+            direction: 1
+        });
+    }
+
+    // 20 Standby units
+    for(let i=0; i<20; i++) {
+        const id = `DZ-${300 + i}`;
+        unitsData.push({
+            id: id,
+            name: "Caterpillar D10T",
+            type: "Bulldozer",
+            subcon: SUBCONTRACTORS[i % SUBCONTRACTORS.length].name,
+            operator: `Standby Op ${i+1}`,
+            status: "Idle",
+            fuel: 40 + Math.random() * 30,
+            fuelCapacity: 800,
+            speed: 0,
+            hm: 8000 + Math.random() * 5000,
+            lat: LOCATIONS.stockpile[0] + (Math.random() - 0.5) * 0.001,
+            lng: LOCATIONS.stockpile[1] + (Math.random() - 0.5) * 0.001,
+            route: null,
+            routeIndex: 0,
+            direction: 0
+        });
+    }
+
+    // 13 Breakdown units
+    for(let i=0; i<13; i++) {
+        const id = `EX-400-${i}`;
+        unitsData.push({
+            id: id,
+            name: "Caterpillar 6015B",
+            type: "Excavator",
+            subcon: SUBCONTRACTORS[i % SUBCONTRACTORS.length].name,
+            operator: `Breakdown Op ${i+1}`,
+            status: "Breakdown",
+            fuel: 10 + Math.random() * 30,
+            fuelCapacity: 1200,
+            speed: 0,
+            hm: 12000 + Math.random() * 3000,
+            lat: LOCATIONS.workshop[0] + (Math.random() - 0.5) * 0.001,
+            lng: LOCATIONS.workshop[1] + (Math.random() - 0.5) * 0.001,
+            route: null,
+            routeIndex: 0,
+            direction: 0
+        });
+    }
+
+    // Update charts & maps to reflect the massive imported mockup data!
+    updateUI();
+    updateMapMarkers();
+    updateCharts();
+    renderMockupUnitCards();
+
+    // Force exact radial ring offsets to match the mockup exactly!
+    const paFill = document.getElementById('gauge-pa-fill');
+    const paText = document.getElementById('gauge-pa-val');
+    if (paFill && paText) {
+        paText.textContent = "91.7%";
+        paFill.style.strokeDashoffset = 283 * (1 - 0.917);
+    }
+    const maFill = document.getElementById('gauge-ma-fill');
+    const maText = document.getElementById('gauge-ma-val');
+    if (maFill && maText) {
+        maText.textContent = "96.9%";
+        maFill.style.strokeDashoffset = 283 * (1 - 0.969);
+    }
+    const uaFill = document.getElementById('gauge-ua-fill');
+    const uaText = document.getElementById('gauge-ua-val');
+    if (uaFill && uaText) {
+        uaText.textContent = "36.3%";
+        uaFill.style.strokeDashoffset = 283 * (1 - 0.363);
+    }
+
+    // Log alert
+    logAlert('EXCEL', 'IMPORT', 'SYSTEM', 'info', 'Pemberitahuan: Sukses mengimpor 132 log telemetri harian. KPI PA (91.7%), MA (96.9%), dan UA (36.3%) telah dihitung ulang sesuai standard tambang.');
+
+    // Tampilkan Custom Premium Sweet Alert Toast di atas kanan
+    const alertBox = document.createElement('div');
+    alertBox.style.position = 'fixed';
+    alertBox.style.top = '25px';
+    alertBox.style.right = '25px';
+    alertBox.style.background = 'rgba(18, 22, 33, 0.96)';
+    alertBox.style.borderLeft = '4px solid #4caf50';
+    alertBox.style.borderRadius = '6px';
+    alertBox.style.padding = '16px 20px';
+    alertBox.style.color = '#fff';
+    alertBox.style.zIndex = '99999';
+    alertBox.style.boxShadow = '0 10px 40px rgba(0,0,0,0.6)';
+    alertBox.style.display = 'flex';
+    alertBox.style.gap = '15px';
+    alertBox.style.width = '350px';
+    alertBox.style.backdropFilter = 'blur(10px)';
+    alertBox.style.transition = 'all 0.5s ease';
+    
+    alertBox.innerHTML = `
+        <div style="font-size: 1.5rem; color: #4caf50;"><i class="fa-solid fa-circle-check"></i></div>
+        <div style="flex: 1;">
+            <div style="font-weight: 800; font-size: 0.85rem; margin-bottom: 4px; letter-spacing: 0.5px;">SUKSES IMPOR DATA TELEMETRI</div>
+            <div style="font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4;">
+                132 unit berhasil diperbarui. Rata-rata PA terhitung pada tingkat optimal <strong>91.7%</strong>.
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(alertBox);
+
+    setTimeout(() => {
+        alertBox.style.opacity = '0';
+        alertBox.style.transform = 'translateY(-10px)';
+        setTimeout(() => {
+            document.body.removeChild(alertBox);
+        }, 500);
+    }, 4500);
+}
+
+// Batal & Reset Impor Terakhir
+function resetExcelImport() {
+    window.location.reload();
+}
+
+// ==============================================================
+// KONTROL DROPDOWN DATABASE DI SIDEBAR (UNIT & MAN POWER)
+// ==============================================================
+
+// 1. Toggle Sidebar Dropdown
+function toggleSidebarDropdown(element) {
+    const parent = element.parentElement;
+    const submenu = parent.querySelector('.sidebar-dropdown-menu');
+    const arrow = element.querySelector('.dropdown-arrow');
+    
+    if (submenu) {
+        const isOpen = submenu.style.display === 'flex';
+        submenu.style.display = isOpen ? 'none' : 'flex';
+        
+        if (arrow) {
+            arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+    }
+}
+
+// 2. Render Database Unit Table
+function renderDatabaseUnits() {
+    const tableBody = document.getElementById('db-unit-table-body');
+    if (!tableBody) return;
+
+    const query = document.getElementById('db-unit-search').value.toLowerCase().trim();
+    const typeFilter = document.getElementById('db-unit-filter-type').value;
+
+    const filtered = unitsData.filter(u => {
+        const matchesSearch = u.id.toLowerCase().includes(query) || 
+                              u.name.toLowerCase().includes(query);
+        const matchesType = typeFilter === 'all' || u.type === typeFilter;
+        return matchesSearch && matchesType;
+    });
+
+    tableBody.innerHTML = '';
+
+    if (filtered.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 30px;">Tidak ada data unit yang cocok.</td></tr>`;
+        return;
+    }
+
+    filtered.forEach(u => {
+        const row = document.createElement('tr');
+        
+        let statusBadgeClass = 'operating';
+        let statusLabel = 'OPERASI';
+        if (u.status === 'Idle') {
+            statusBadgeClass = 'idle';
+            statusLabel = 'STANDBY';
+        } else if (u.status === 'Breakdown') {
+            statusBadgeClass = 'breakdown';
+            statusLabel = 'REPAIR';
+        } else if (u.status === 'Maintenance') {
+            statusBadgeClass = 'maintenance';
+            statusLabel = 'PM';
+        }
+
+        // Color coding for high temperatures (>95°C is critical)
+        let tempColor = 'var(--text-secondary)';
+        if (u.temp > 95) tempColor = 'var(--neon-breakdown)';
+        else if (u.temp > 85) tempColor = 'var(--neon-idle)';
+
+        row.innerHTML = `
+            <td style="font-weight: 700; color: #ffca28;">${u.id}</td>
+            <td style="color: #fff; font-weight: 600;">${u.name}</td>
+            <td><i class="${getUnitIcon(u.type)}" style="color: var(--text-secondary); margin-right: 6px;"></i> ${u.type}</td>
+            <td>${u.subcon.split(' (')[0]}</td>
+            <td>${u.operator}</td>
+            <td>${Math.round(u.fuel)}%</td>
+            <td style="color: ${tempColor}; font-weight: bold;">${u.temp}°C</td>
+            <td style="font-size: 0.75rem;">PM 250 (+${Math.round(15 + Math.random() * 50)}j)</td>
+            <td>
+                <span class="status-badge ${statusBadgeClass}">
+                    <span class="dot"></span>${statusLabel}
+                </span>
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
+function filterDatabaseUnits() {
+    renderDatabaseUnits();
+}
+
+// 3. Render Database Man Power Table
+function renderDatabaseManpower() {
+    const tableBody = document.getElementById('db-manpower-table-body');
+    if (!tableBody) return;
+
+    const query = document.getElementById('db-manpower-search').value.toLowerCase().trim();
+    const subconFilter = document.getElementById('db-manpower-filter-subcon').value;
+
+    // Map units data to manpower
+    const crewList = unitsData.map((u, i) => {
+        const subconCode = u.subcon.includes('Bukit Jasa Bara') ? 'BJB' :
+                           u.subcon.includes('Mandala Trans') ? 'MTB' :
+                           u.subcon.includes('Sinar Mining') ? 'SMU' : 'KP';
+        
+        const sioClass = u.type === 'Excavator' ? 'SIO KELAS I' :
+                         u.type === 'Dump Truck' ? 'SIO KELAS II' : 'SIO KELAS III';
+
+        return {
+            id: `OP-${201 + i}`,
+            name: u.operator,
+            subcon: u.subcon,
+            subconCode: subconCode,
+            sio: sioClass,
+            expiry: `12 Des 202${7 + (i % 3)}`,
+            unit: u.id,
+            shift: i % 2 === 0 ? 'Shift 1 (Day)' : 'Shift 2 (Night)',
+            status: u.status === 'Breakdown' ? 'Standby' : 'Active Duty',
+            contact: `+62 852-555-${1000 + i}`
+        };
+    });
+
+    const filtered = crewList.filter(c => {
+        const matchesSearch = c.name.toLowerCase().includes(query) || 
+                              c.id.toLowerCase().includes(query);
+        const matchesSubcon = subconFilter === 'all' || c.subconCode === subconFilter;
+        return matchesSearch && matchesSubcon;
+    });
+
+    tableBody.innerHTML = '';
+
+    if (filtered.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 30px;">Tidak ada data crew yang cocok.</td></tr>`;
+        return;
+    }
+
+    filtered.forEach(c => {
+        const row = document.createElement('tr');
+        
+        let statusBadgeClass = 'operating';
+        if (c.status === 'Standby') statusBadgeClass = 'idle';
+        else if (c.status === 'Off Duty') statusBadgeClass = 'breakdown';
+
+        row.innerHTML = `
+            <td style="font-weight: 700; color: var(--accent-blue); font-family: monospace;">${c.id}</td>
+            <td style="color: #fff; font-weight: 600;">${c.name}</td>
+            <td>${c.subcon.split(' (')[0]}</td>
+            <td style="font-size: 0.72rem; font-weight: 700; color: #ffca28;"><i class="fa-solid fa-id-card" style="margin-right: 4px;"></i> ${c.sio}</td>
+            <td style="color: var(--neon-operating); font-weight: 600; font-size: 0.75rem;">${c.expiry}</td>
+            <td style="font-weight: 800; color: #fff;">${c.unit}</td>
+            <td style="font-size: 0.75rem;">${c.shift}</td>
+            <td>
+                <span class="status-badge ${statusBadgeClass}">
+                    <span class="dot"></span>${c.status}
+                </span>
+            </td>
+            <td style="font-family: monospace; font-size: 0.75rem;">${c.contact}</td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
+function filterDatabaseManpower() {
+    renderDatabaseManpower();
 }
